@@ -1,1 +1,88 @@
-terraform.tfvars
+
+# =========================
+# Terraform
+# =========================
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+terraform.tfstate.d
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform variable files (may contain secrets)
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!terraform.tfvars.example
+
+# Terraform CLI config / credentials
+.terraformrc
+terraform.rc
+terraform.rc.json
+
+# =========================
+# Secrets and credentials
+# =========================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa
+id_ed25519
+id_ecdsa
+*_private_key
+*_private_key.*
+secrets/
+credentials/
+secrets.yml
+secrets.yaml
+credentials.yml
+credentials.yaml
+
+# =========================
+# Ansible
+# =========================
+*.retry
+vault-password
+vault-password.*
+.vault_pass
+.vault_pass.*
+
+# Keep encrypted vault files only if you intentionally want to version them.
+# Uncomment these if you do NOT want to push any vault files:
+# *vault.yml
+# *vault.yaml
+
+# =========================
+# SSH and generated keys
+# =========================
+.ssh/
+ssh_keys/
+keys/
+*-key
+*-key.pub
+*.pub
+
+# =========================
+# OS / editor
+# =========================
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
