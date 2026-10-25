@@ -24,7 +24,18 @@
 
 - name: Configure OpenSearch APT repository
   ansible.builtin.deb822_repository:
-    repo: "deb [signed-by={{ opensearch_keyring_path }}] https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_repo_version }}/apt stable main"
-    filename: opensearch-3.x
-    state: present
-    update_cache: true
+    name: opensearch-3.x
+    types:
+      - deb
+    uris:
+      - https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt
+    suites:
+      - stable
+    components:
+      - main
+    signed_by: "{{ opensearch_keyring_path }}"
+  notify: Update APT cache
+
+- name: Run notified handlers now
+  ansible.builtin.meta: flush_handlers
+

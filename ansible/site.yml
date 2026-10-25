@@ -18,11 +18,6 @@
           - "RAM: {{ ansible_facts['memtotal_mb']}} MB"
           - "CPU cores: {{ ansible_facts['processor_vcpus'] }}"
 
-    - name: update apt package cache
-      ansible.builtin.apt:
-        update_cache: true
-        cache_valid_time: 3600
-
     - name: install required packages
       ansible.builtin.apt:
         name:
