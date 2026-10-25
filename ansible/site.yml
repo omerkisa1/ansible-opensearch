@@ -3,6 +3,9 @@
   hosts: opensearch
   become: true
 
+  roles:
+    - opensearch
+
 
   tasks:
     - name: check os
