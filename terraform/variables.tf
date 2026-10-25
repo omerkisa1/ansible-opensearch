@@ -6,4 +6,3 @@ variable "external_network_id" { type = string }
 variable "medium_flavor_id" { type = string }
 variable "opensearch_network_cidr" { type = string }
 variable "ssh_allowed_cidr" { type = string }
-variable "external_network_name" { type = string }

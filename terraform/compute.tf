@@ -1,5 +1,5 @@
 resource "openstack_compute_instance_v2" "opensearch" {
-  name            = "opensearch-lab-01"
+  name            = "opensearch"
   image_id        = var.ubuntu_image_id
   flavor_id       = var.medium_flavor_id
   key_pair        = openstack_compute_keypair_v2.opensearch.name
