@@ -45,4 +45,3 @@
     state: present
   environment:
     OPENSEARCH_INITIAL_ADMIN_PASSWORD: "{{ opensearch_admin_password }}"
-  no_log: true
