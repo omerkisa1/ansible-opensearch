@@ -8,3 +8,51 @@ opensearch_admin_password: "{{ vault_opensearch_admin_password }}"
 opensearch_max_map_count: 262144
 opensearch_swappiness: 1
 opensearch_nofile_limit: 65535
+
+opensearch_cluster_name: opensearch-cluster
+opensearch_node_name: "{{ inventory_hostname }}"
+opensearch_data_path: /var/lib/opensearch
+opensearch_logs_path: /var/log/opensearch
+opensearch_memory_lock: true
+opensearch_network_host: ["_local_", "_site_"]
+opensearch_http_port: 9200
+opensearch_transport_port: 9300
+opensearch_discovery_type: single-node
+
+opensearch_security_ssl_cert: esnode.pem
+opensearch_security_ssl_key: esnode-key.pem
+opensearch_security_ssl_ca: root-ca.pem
+opensearch_security_allow_demo_certs: true
+opensearch_security_admin_dn:
+  - "CN=kirk,OU=client,O=client,L=test,C=de"
+opensearch_security_system_indices:
+  - ".plugins-ml-agent"
+  - ".plugins-ml-config"
+  - ".plugins-ml-connector"
+  - ".plugins-ml-controller"
+  - ".plugins-ml-model-group"
+  - ".plugins-ml-model"
+  - ".plugins-ml-task"
+  - ".plugins-ml-conversation-meta"
+  - ".plugins-ml-conversation-interactions"
+  - ".plugins-ml-memory-meta"
+  - ".plugins-ml-memory-message"
+  - ".plugins-ml-stop-words"
+  - ".opendistro-alerting-config"
+  - ".opendistro-alerting-alert*"
+  - ".opendistro-anomaly-results*"
+  - ".opendistro-anomaly-detector*"
+  - ".opendistro-anomaly-checkpoints"
+  - ".opendistro-anomaly-detection-state"
+  - ".opendistro-reports-*"
+  - ".opensearch-notifications-*"
+  - ".opensearch-notebooks"
+  - ".opensearch-observability"
+  - ".ql-datasources"
+  - ".opendistro-asynchronous-search-response*"
+  - ".replication-metadata-store"
+  - ".opensearch-knn-models"
+  - ".geospatial-ip2geo-data*"
+  - ".plugins-flow-framework-config"
+  - ".plugins-flow-framework-templates"
+  - ".plugins-flow-framework-state"

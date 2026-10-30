@@ -1,0 +1,33 @@
+# {{ ansible_managed }}
+
+cluster.name: {{ opensearch_cluster_name }}
+node.name: {{ opensearch_node_name }}
+
+path.data: {{ opensearch_data_path }}
+path.logs: {{ opensearch_logs_path }}
+
+bootstrap.memory_lock: {{ opensearch_memory_lock | lower }}
+
+network.host: {{ opensearch_network_host | to_json }}
+http.port: {{ opensearch_http_port }}
+transport.port: {{ opensearch_transport_port }}
+
+discovery.type: {{ opensearch_discovery_type }}
+
+plugins.security.ssl.transport.pemcert_filepath: {{ opensearch_security_ssl_cert }}
+plugins.security.ssl.transport.pemkey_filepath: {{ opensearch_security_ssl_key }}
+plugins.security.ssl.transport.pemtrustedcas_filepath: {{ opensearch_security_ssl_ca }}
+plugins.security.ssl.transport.enforce_hostname_verification: false
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: {{ opensearch_security_ssl_cert }}
+plugins.security.ssl.http.pemkey_filepath: {{ opensearch_security_ssl_key }}
+plugins.security.ssl.http.pemtrustedcas_filepath: {{ opensearch_security_ssl_ca }}
+plugins.security.allow_unsafe_democertificates: {{ opensearch_security_allow_demo_certs | lower }}
+plugins.security.allow_default_init_securityindex: true
+plugins.security.authcz.admin_dn: {{ opensearch_security_admin_dn | to_json }}
+plugins.security.audit.type: internal_opensearch
+plugins.security.enable_snapshot_restore_privilege: true
+plugins.security.check_snapshot_restore_write_privileges: true
+plugins.security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+plugins.security.system_indices.enabled: true
+plugins.security.system_indices.indices: {{ opensearch_security_system_indices | to_json }}
