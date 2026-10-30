@@ -5,6 +5,9 @@
 - name: Install OpenSearch
   ansible.builtin.import_tasks: install.yml
 
+- name: Configure OpenSearch TLS certificates
+  ansible.builtin.import_tasks: certs.yml
+
 - name: Configure OpenSearch
   ansible.builtin.import_tasks: config.yml
 

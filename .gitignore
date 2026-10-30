@@ -56,6 +56,7 @@ credentials.yaml
 # Ansible
 # =========================
 ansible/inventory.ini
+ansible/certs/
 *.retry
 vault-password
 vault-password.*

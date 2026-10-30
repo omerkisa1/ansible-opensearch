@@ -21,12 +21,21 @@ opensearch_discovery_type: single-node
 
 opensearch_heap_size: "{{ [ansible_facts['memtotal_mb'] | int // 2, 31744] | min }}m"
 
-opensearch_security_ssl_cert: esnode.pem
-opensearch_security_ssl_key: esnode-key.pem
-opensearch_security_ssl_ca: root-ca.pem
-opensearch_security_allow_demo_certs: true
+opensearch_certs_dir: /etc/opensearch/certs
+opensearch_certs_local_dir: "{{ playbook_dir }}/certs"
+opensearch_certs_ca_cn: OpenSearch Root CA
+opensearch_certs_admin_cn: admin
+opensearch_certs_ca_validity: "+3650d"
+opensearch_certs_validity: "+730d"
+
+opensearch_security_ssl_cert: "{{ opensearch_certs_dir }}/node.pem"
+opensearch_security_ssl_key: "{{ opensearch_certs_dir }}/node-key.pem"
+opensearch_security_ssl_ca: "{{ opensearch_certs_dir }}/root-ca.pem"
+opensearch_security_allow_demo_certs: false
 opensearch_security_admin_dn:
-  - "CN=kirk,OU=client,O=client,L=test,C=de"
+  - "CN={{ opensearch_certs_admin_cn }}"
+opensearch_security_nodes_dn:
+  - "CN={{ opensearch_node_name }}"
 opensearch_security_system_indices:
   - ".plugins-ml-agent"
   - ".plugins-ml-config"

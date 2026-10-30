@@ -25,6 +25,7 @@ plugins.security.ssl.http.pemtrustedcas_filepath: {{ opensearch_security_ssl_ca 
 plugins.security.allow_unsafe_democertificates: {{ opensearch_security_allow_demo_certs | lower }}
 plugins.security.allow_default_init_securityindex: true
 plugins.security.authcz.admin_dn: {{ opensearch_security_admin_dn | to_json }}
+plugins.security.nodes_dn: {{ opensearch_security_nodes_dn | to_json }}
 plugins.security.audit.type: internal_opensearch
 plugins.security.enable_snapshot_restore_privilege: true
 plugins.security.check_snapshot_restore_write_privileges: true

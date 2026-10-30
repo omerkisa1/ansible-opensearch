@@ -1,0 +1,141 @@
+---
+- name: Generate certificate authority on control node
+  delegate_to: localhost
+  become: false
+  run_once: true
+  block:
+    - name: Ensure local certificate directory exists
+      ansible.builtin.file:
+        path: "{{ opensearch_certs_local_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Generate CA private key
+      community.crypto.openssl_privatekey:
+        path: "{{ opensearch_certs_local_dir }}/root-ca-key.pem"
+        mode: "0600"
+
+    - name: Generate CA signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ opensearch_certs_local_dir }}/root-ca-key.pem"
+        common_name: "{{ opensearch_certs_ca_cn }}"
+        use_common_name_for_san: false
+        basic_constraints:
+          - "CA:TRUE"
+        basic_constraints_critical: true
+        key_usage:
+          - keyCertSign
+          - cRLSign
+        key_usage_critical: true
+      register: opensearch_ca_csr
+      changed_when: false
+
+    - name: Generate self-signed CA certificate
+      community.crypto.x509_certificate:
+        path: "{{ opensearch_certs_local_dir }}/root-ca.pem"
+        csr_content: "{{ opensearch_ca_csr.csr }}"
+        privatekey_path: "{{ opensearch_certs_local_dir }}/root-ca-key.pem"
+        provider: selfsigned
+        selfsigned_not_after: "{{ opensearch_certs_ca_validity }}"
+        mode: "0644"
+
+    - name: Generate admin private key
+      community.crypto.openssl_privatekey:
+        path: "{{ opensearch_certs_local_dir }}/admin-key.pem"
+        format: pkcs8
+        mode: "0600"
+
+    - name: Generate admin signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ opensearch_certs_local_dir }}/admin-key.pem"
+        common_name: "{{ opensearch_certs_admin_cn }}"
+        use_common_name_for_san: false
+        key_usage:
+          - digitalSignature
+          - keyEncipherment
+        extended_key_usage:
+          - clientAuth
+      register: opensearch_admin_csr
+      changed_when: false
+
+    - name: Generate admin certificate
+      community.crypto.x509_certificate:
+        path: "{{ opensearch_certs_local_dir }}/admin.pem"
+        csr_content: "{{ opensearch_admin_csr.csr }}"
+        provider: ownca
+        ownca_path: "{{ opensearch_certs_local_dir }}/root-ca.pem"
+        ownca_privatekey_path: "{{ opensearch_certs_local_dir }}/root-ca-key.pem"
+        ownca_not_after: "{{ opensearch_certs_validity }}"
+        mode: "0644"
+
+- name: Generate node certificate on control node
+  delegate_to: localhost
+  become: false
+  block:
+    - name: Generate node private key
+      community.crypto.openssl_privatekey:
+        path: "{{ opensearch_certs_local_dir }}/{{ opensearch_node_name }}-key.pem"
+        format: pkcs8
+        mode: "0600"
+
+    - name: Generate node signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ opensearch_certs_local_dir }}/{{ opensearch_node_name }}-key.pem"
+        common_name: "{{ opensearch_node_name }}"
+        subject_alt_name:
+          - "DNS:{{ opensearch_node_name }}"
+          - "DNS:localhost"
+          - "IP:127.0.0.1"
+          - "IP:{{ ansible_facts['default_ipv4']['address'] }}"
+        key_usage:
+          - digitalSignature
+          - keyEncipherment
+        extended_key_usage:
+          - serverAuth
+          - clientAuth
+      register: opensearch_node_csr
+      changed_when: false
+
+    - name: Generate node certificate
+      community.crypto.x509_certificate:
+        path: "{{ opensearch_certs_local_dir }}/{{ opensearch_node_name }}.pem"
+        csr_content: "{{ opensearch_node_csr.csr }}"
+        provider: ownca
+        ownca_path: "{{ opensearch_certs_local_dir }}/root-ca.pem"
+        ownca_privatekey_path: "{{ opensearch_certs_local_dir }}/root-ca-key.pem"
+        ownca_not_after: "{{ opensearch_certs_validity }}"
+        mode: "0644"
+
+- name: Ensure OpenSearch certificate directory exists
+  ansible.builtin.file:
+    path: "{{ opensearch_certs_dir }}"
+    state: directory
+    owner: root
+    group: opensearch
+    mode: "0750"
+
+- name: Copy CA and node certificates
+  ansible.builtin.copy:
+    src: "{{ opensearch_certs_local_dir }}/{{ item.src }}"
+    dest: "{{ opensearch_certs_dir }}/{{ item.dest }}"
+    owner: root
+    group: opensearch
+    mode: "0640"
+  loop:
+    - { src: "root-ca.pem", dest: "root-ca.pem" }
+    - { src: "{{ opensearch_node_name }}.pem", dest: "node.pem" }
+    - { src: "{{ opensearch_node_name }}-key.pem", dest: "node-key.pem" }
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Restart OpenSearch
+
+- name: Copy admin certificate
+  ansible.builtin.copy:
+    src: "{{ opensearch_certs_local_dir }}/{{ item }}"
+    dest: "{{ opensearch_certs_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop:
+    - admin.pem
+    - admin-key.pem

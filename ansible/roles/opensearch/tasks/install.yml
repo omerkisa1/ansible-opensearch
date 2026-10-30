@@ -52,5 +52,6 @@
   ansible.builtin.apt:
     name: opensearch
     state: present
+  no_log: true
   environment:
     OPENSEARCH_INITIAL_ADMIN_PASSWORD: "{{ opensearch_admin_password }}"
