@@ -8,3 +8,12 @@
     mode: "0640"
     backup: true
   notify: Restart OpenSearch
+
+- name: Configure JVM heap size
+  ansible.builtin.template:
+    src: heap.options.j2
+    dest: /etc/opensearch/jvm.options.d/heap.options
+    owner: root
+    group: opensearch
+    mode: "0640"
+  notify: Restart OpenSearch
