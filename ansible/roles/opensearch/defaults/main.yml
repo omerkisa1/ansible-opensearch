@@ -3,4 +3,3 @@
 opensearch_repo_version: "3.x"
 opensearch_gpg_url: "https://artifacts.opensearch.org/publickeys/opensearch-release.pgp"
 opensearch_keyring_path: "/etc/apt/keyrings/opensearch.gpg"
-opensearch_repo_path: "/etc/apt/sources.list.d/opensearch-3.x.list"

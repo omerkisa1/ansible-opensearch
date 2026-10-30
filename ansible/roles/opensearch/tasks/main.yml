@@ -1,5 +1,15 @@
 
 ---
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
 - name: Ensure APT keyrings directory exists
   ansible.builtin.file:
     path: /etc/apt/keyrings
@@ -24,11 +34,11 @@
 
 - name: Configure OpenSearch APT repository
   ansible.builtin.deb822_repository:
-    name: opensearch-3.x
+    name: "opensearch-{{ opensearch_repo_version }}"
     types:
       - deb
     uris:
-      - https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt
+      - "https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_repo_version }}/apt"
     suites:
       - stable
     components:
