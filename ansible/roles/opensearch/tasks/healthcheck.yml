@@ -1,0 +1,32 @@
+---
+- name: Wait for OpenSearch HTTP port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ opensearch_http_port }}"
+    timeout: "{{ opensearch_healthcheck_port_timeout }}"
+
+- name: Wait for OpenSearch cluster health
+  ansible.builtin.uri:
+    url: "https://localhost:{{ opensearch_http_port }}/_cluster/health"
+    method: GET
+    user: "{{ opensearch_admin_user }}"
+    password: "{{ opensearch_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: [200, 503]
+    return_content: true
+  register: opensearch_health
+  until:
+    - opensearch_health.status == 200
+    - opensearch_health.json.status in opensearch_healthcheck_status
+  retries: "{{ opensearch_healthcheck_retries }}"
+  delay: "{{ opensearch_healthcheck_delay }}"
+  changed_when: false
+
+- name: Show OpenSearch cluster health
+  ansible.builtin.debug:
+    msg:
+      - "Cluster: {{ opensearch_health.json.cluster_name }}"
+      - "Status: {{ opensearch_health.json.status }}"
+      - "Nodes: {{ opensearch_health.json.number_of_nodes }}"
+      - "Active shards: {{ opensearch_health.json.active_shards_percent_as_number }}%"

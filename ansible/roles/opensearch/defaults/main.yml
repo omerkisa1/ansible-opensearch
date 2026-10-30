@@ -3,6 +3,7 @@ opensearch_repo_version: "3.x"
 opensearch_gpg_url: "https://artifacts.opensearch.org/publickeys/opensearch-release.pgp"
 opensearch_keyring_path: "/etc/apt/keyrings/opensearch.gpg"
 opensearch_admin_password: "{{ vault_opensearch_admin_password }}"
+opensearch_admin_user: admin
 
 opensearch_max_map_count: 262144
 opensearch_swappiness: 1
@@ -57,3 +58,8 @@ opensearch_security_system_indices:
   - ".plugins-flow-framework-config"
   - ".plugins-flow-framework-templates"
   - ".plugins-flow-framework-state"
+
+opensearch_healthcheck_status: ["green", "yellow"]
+opensearch_healthcheck_port_timeout: 120
+opensearch_healthcheck_retries: 30
+opensearch_healthcheck_delay: 5

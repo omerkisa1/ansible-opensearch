@@ -10,3 +10,6 @@
 
 - name: Manage OpenSearch service
   ansible.builtin.import_tasks: service.yml
+
+- name: Verify OpenSearch health
+  ansible.builtin.import_tasks: healthcheck.yml
