@@ -1,6 +1,10 @@
-
 ---
 opensearch_repo_version: "3.x"
 opensearch_gpg_url: "https://artifacts.opensearch.org/publickeys/opensearch-release.pgp"
 opensearch_keyring_path: "/etc/apt/keyrings/opensearch.gpg"
 opensearch_admin_password: "{{ vault_opensearch_admin_password }}"
+
+# System tuning
+opensearch_max_map_count: 262144
+opensearch_swappiness: 1
+opensearch_nofile_limit: 65535

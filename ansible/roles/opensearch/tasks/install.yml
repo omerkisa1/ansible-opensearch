@@ -1,0 +1,56 @@
+---
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure APT keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download OpenSearch signing key
+  ansible.builtin.get_url:
+    url: "{{ opensearch_gpg_url }}"
+    dest: /tmp/opensearch-release.pgp
+    mode: "0644"
+
+- name: Convert OpenSearch signing key to keyring format
+  ansible.builtin.command:
+    cmd: >-
+      gpg --dearmor --batch --yes
+      --output {{ opensearch_keyring_path }}
+      /tmp/opensearch-release.pgp
+    creates: "{{ opensearch_keyring_path }}"
+
+- name: Configure OpenSearch APT repository
+  ansible.builtin.deb822_repository:
+    name: "opensearch-{{ opensearch_repo_version }}"
+    types:
+      - deb
+    uris:
+      - "https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_repo_version }}/apt"
+    suites:
+      - stable
+    components:
+      - main
+    signed_by: "{{ opensearch_keyring_path }}"
+  notify: Update APT cache
+
+- name: Run notified handlers now
+  ansible.builtin.meta: flush_handlers
+
+- name: Install OpenSearch
+  ansible.builtin.apt:
+    name: opensearch
+    state: present
+  environment:
+    OPENSEARCH_INITIAL_ADMIN_PASSWORD: "{{ opensearch_admin_password }}"
