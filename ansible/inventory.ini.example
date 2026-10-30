@@ -1,0 +1,7 @@
+[opensearch]
+
+# Terraform apply sonrasında oluşan floating IP'yi buraya yazın.
+opensearch-vm ansible_host=CHANGE_ME ansible_user=ubuntu ansible_ssh_private_key_file=~/Desktop/pem_files/opensearch-key
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3

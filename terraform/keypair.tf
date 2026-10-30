@@ -8,13 +8,13 @@ resource "openstack_compute_keypair_v2" "opensearch" {
 }
 
 resource "local_sensitive_file" "opensearch_private_key" {
-  filename        = "/home/omer/Desktop/pemfiles/opensearch-key"
+  filename        = pathexpand("~/Desktop/pem_files/opensearch-key")
   content         = tls_private_key.opensearch.private_key_openssh
   file_permission = "0600"
 }
 
 resource "local_file" "opensearch_public_key" {
-  filename        = "/home/omer/Desktop/mtom-keys/opensearch-key.pub"
+  filename        = pathexpand("~/Desktop/pem_files/opensearch-key.pub")
   content         = tls_private_key.opensearch.public_key_openssh
   file_permission = "0644"
 }
