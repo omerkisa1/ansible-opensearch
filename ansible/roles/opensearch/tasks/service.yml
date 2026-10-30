@@ -1,0 +1,9 @@
+---
+- name: Apply pending configuration changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start OpenSearch
+  ansible.builtin.systemd:
+    name: opensearch
+    enabled: true
+    state: started
