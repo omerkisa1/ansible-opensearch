@@ -72,3 +72,22 @@ opensearch_healthcheck_status: ["green", "yellow"]
 opensearch_healthcheck_port_timeout: 120
 opensearch_healthcheck_retries: 30
 opensearch_healthcheck_delay: 5
+
+opensearch_security_config_dir: /etc/opensearch/opensearch-security
+opensearch_securityadmin_path: /usr/share/opensearch/plugins/opensearch-security/tools/securityadmin.sh
+
+opensearch_internal_users:
+  admin:
+    hash: "{{ vault_opensearch_admin_password_hash }}"
+    reserved: true
+    backend_roles: ["admin"]
+    description: "Cluster administrator"
+opensearch_roles: {}
+opensearch_roles_mapping:
+  all_access:
+    reserved: false
+    backend_roles: ["admin"]
+
+opensearch_extra_internal_users: {}
+opensearch_extra_roles: {}
+opensearch_extra_roles_mapping: {}

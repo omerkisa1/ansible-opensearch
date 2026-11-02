@@ -17,3 +17,14 @@
     group: opensearch
     mode: "0640"
   notify: Restart OpenSearch
+
+- name: Remove demo certificates
+  ansible.builtin.file:
+    path: "/etc/opensearch/{{ item }}"
+    state: absent
+  loop:
+    - esnode.pem
+    - esnode-key.pem
+    - kirk.pem
+    - kirk-key.pem
+    - root-ca.pem

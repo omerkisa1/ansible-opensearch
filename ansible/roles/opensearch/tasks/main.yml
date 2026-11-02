@@ -16,3 +16,6 @@
 
 - name: Verify OpenSearch health
   ansible.builtin.import_tasks: healthcheck.yml
+
+- name: Configure OpenSearch users and roles
+  ansible.builtin.import_tasks: security.yml

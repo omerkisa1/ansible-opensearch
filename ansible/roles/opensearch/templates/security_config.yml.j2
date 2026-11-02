@@ -1,0 +1,2 @@
+---
+{{ {'_meta': {'type': item.type, 'config_version': 2}} | combine(item.config) | to_nice_yaml(indent=2) }}

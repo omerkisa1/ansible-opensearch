@@ -1,0 +1,45 @@
+---
+- name: Configure security plugin files
+  ansible.builtin.template:
+    src: security_config.yml.j2
+    dest: "{{ opensearch_security_config_dir }}/{{ item.file }}"
+    owner: root
+    group: opensearch
+    mode: "0640"
+  loop:
+    - file: internal_users.yml
+      type: internalusers
+      config: "{{ opensearch_internal_users | combine(opensearch_extra_internal_users) }}"
+    - file: roles.yml
+      type: roles
+      config: "{{ opensearch_roles | combine(opensearch_extra_roles) }}"
+    - file: roles_mapping.yml
+      type: rolesmapping
+      config: "{{ opensearch_roles_mapping | combine(opensearch_extra_roles_mapping) }}"
+  loop_control:
+    label: "{{ item.file }}"
+  no_log: true
+  register: opensearch_security_files
+
+- name: Apply changed security configuration
+  ansible.builtin.command:
+    argv:
+      - "{{ opensearch_securityadmin_path }}"
+      - -f
+      - "{{ opensearch_security_config_dir }}/{{ item.item.file }}"
+      - -t
+      - "{{ item.item.type }}"
+      - -cacert
+      - "{{ opensearch_certs_dir }}/root-ca.pem"
+      - -cert
+      - "{{ opensearch_certs_dir }}/admin.pem"
+      - -key
+      - "{{ opensearch_certs_dir }}/admin-key.pem"
+      - -h
+      - localhost
+  environment:
+    OPENSEARCH_JAVA_HOME: /usr/share/opensearch/jdk
+  loop: "{{ opensearch_security_files.results | selectattr('changed') | list }}"
+  loop_control:
+    label: "{{ item.item.file }}"
+  changed_when: true
