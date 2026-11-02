@@ -88,3 +88,8 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
+
+# =========================
+# Personal notes
+# =========================
+todos.md
