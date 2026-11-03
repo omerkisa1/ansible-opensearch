@@ -1,4 +1,26 @@
 ---
+- name: Check that password hashes are unique
+  vars:
+    opensearch_password_hashes: "{{ opensearch_internal_users | combine(opensearch_extra_internal_users) | dict2items | map(attribute='value.hash') | list }}"
+  ansible.builtin.assert:
+    that: opensearch_password_hashes | length == opensearch_password_hashes | unique | length
+    fail_msg: Two users share the same password hash. Each vault_*_password_hash must be generated separately.
+    quiet: true
+
+- name: Check that the admin password matches its hash
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - 'import sys, bcrypt; p, h = sys.stdin.read().split(chr(10)); sys.exit(not bcrypt.checkpw(p.encode(), h.encode()))'
+    stdin: "{{ opensearch_admin_password }}\n{{ opensearch_internal_users[opensearch_admin_user].hash }}"
+    stdin_add_newline: false
+  delegate_to: localhost
+  become: false
+  run_once: true
+  changed_when: false
+  no_log: true
+
 - name: Configure security plugin files
   ansible.builtin.template:
     src: security_config.yml.j2
