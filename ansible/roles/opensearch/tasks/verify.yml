@@ -102,8 +102,7 @@
         that:
           - opensearch_verify_info.process.mlockall | bool
           - opensearch_verify_stats.process.max_file_descriptors | int == opensearch_nofile_limit | int
-          - opensearch_verify_heap_bytes | int <= opensearch_verify_heap_expected | int
-          - opensearch_verify_heap_bytes | int > (opensearch_verify_heap_expected | int) * 0.9
+          - ((opensearch_verify_heap_bytes | int) - (opensearch_verify_heap_expected | int)) | abs <= (opensearch_verify_heap_expected | int) * 0.05
         fail_msg: >-
           mlockall={{ opensearch_verify_info.process.mlockall }} (expected true),
           max_file_descriptors={{ opensearch_verify_stats.process.max_file_descriptors }} (expected {{ opensearch_nofile_limit }}),
