@@ -1,0 +1,154 @@
+---
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Check OpenSearch service
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services['opensearch.service'].state == 'running'
+      - ansible_facts.services['opensearch.service'].status == 'enabled'
+    fail_msg: >-
+      opensearch.service is {{ ansible_facts.services['opensearch.service'].state }}
+      / {{ ansible_facts.services['opensearch.service'].status }}, expected running / enabled
+    success_msg: opensearch.service is running and enabled
+
+- name: Read kernel parameters
+  ansible.builtin.command: sysctl -n vm.max_map_count vm.swappiness
+  register: opensearch_verify_sysctl
+  changed_when: false
+
+- name: Check kernel parameters and swap
+  ansible.builtin.assert:
+    that:
+      - opensearch_verify_sysctl.stdout_lines[0] | int == opensearch_max_map_count | int
+      - opensearch_verify_sysctl.stdout_lines[1] | int == opensearch_swappiness | int
+      - ansible_facts['swaptotal_mb'] | int == 0
+    fail_msg: >-
+      vm.max_map_count={{ opensearch_verify_sysctl.stdout_lines[0] }} (expected {{ opensearch_max_map_count }}),
+      vm.swappiness={{ opensearch_verify_sysctl.stdout_lines[1] }} (expected {{ opensearch_swappiness }}),
+      swap={{ ansible_facts['swaptotal_mb'] }} MB (expected 0)
+    success_msg: "vm.max_map_count={{ opensearch_max_map_count }}, vm.swappiness={{ opensearch_swappiness }}, swap off"
+
+- name: Find PEM files in the OpenSearch config directory
+  ansible.builtin.find:
+    paths: /etc/opensearch
+    patterns: "*.pem"
+  register: opensearch_verify_demo_certs
+
+- name: Find PEM files in the certificate directory
+  ansible.builtin.find:
+    paths: "{{ opensearch_certs_dir }}"
+    patterns: "*.pem"
+  register: opensearch_verify_certs
+
+- name: Check certificate files
+  vars:
+    opensearch_verify_demo_names: "{{ opensearch_verify_demo_certs.files | map(attribute='path') | map('basename') | sort }}"
+    opensearch_verify_cert_names: "{{ opensearch_verify_certs.files | map(attribute='path') | map('basename') | sort }}"
+  ansible.builtin.assert:
+    that:
+      - opensearch_verify_demo_names | length == 0
+      - opensearch_verify_cert_names == ['admin-key.pem', 'admin.pem', 'node-key.pem', 'node.pem', 'root-ca.pem']
+    fail_msg: >-
+      /etc/opensearch: {{ opensearch_verify_demo_names }} (expected none),
+      {{ opensearch_certs_dir }}: {{ opensearch_verify_cert_names }}
+    success_msg: Demo certificates are gone and our certificates are in place
+
+- name: Read the certificate served on the HTTP port
+  ansible.builtin.shell: >-
+    set -o pipefail &&
+    openssl s_client -connect localhost:{{ opensearch_http_port }} </dev/null 2>/dev/null
+    | openssl x509 -noout -subject -issuer -nameopt RFC2253
+  args:
+    executable: /bin/bash
+  register: opensearch_verify_tls
+  changed_when: false
+
+- name: Check the served certificate
+  ansible.builtin.assert:
+    that:
+      - ('subject=CN=' ~ opensearch_node_name) in opensearch_verify_tls.stdout_lines
+      - ('issuer=CN=' ~ opensearch_certs_ca_cn) in opensearch_verify_tls.stdout_lines
+    fail_msg: "Served certificate: {{ opensearch_verify_tls.stdout_lines }}"
+    success_msg: "Port {{ opensearch_http_port }} serves CN={{ opensearch_node_name }} signed by {{ opensearch_certs_ca_cn }}"
+
+- name: Check OpenSearch over the REST API
+  module_defaults:
+    ansible.builtin.uri:
+      method: GET
+      user: "{{ opensearch_admin_user }}"
+      password: "{{ opensearch_admin_password }}"
+      force_basic_auth: true
+      validate_certs: true
+      ca_path: "{{ opensearch_certs_dir }}/root-ca.pem"
+  block:
+    - name: Read node info
+      ansible.builtin.uri:
+        url: "https://localhost:{{ opensearch_http_port }}/_nodes/_local/process,jvm"
+      register: opensearch_verify_node_info
+
+    - name: Read node stats
+      ansible.builtin.uri:
+        url: "https://localhost:{{ opensearch_http_port }}/_nodes/_local/stats/process"
+      register: opensearch_verify_node_stats
+
+    - name: Check memory lock, file descriptor limit and heap
+      vars:
+        opensearch_verify_info: "{{ opensearch_verify_node_info.json.nodes | dict2items | map(attribute='value') | first }}"
+        opensearch_verify_stats: "{{ opensearch_verify_node_stats.json.nodes | dict2items | map(attribute='value') | first }}"
+        opensearch_verify_heap_bytes: "{{ opensearch_verify_info.jvm.mem.heap_max_in_bytes | int }}"
+        opensearch_verify_heap_expected: "{{ (opensearch_heap_size[:-1] | int) * 1048576 }}"
+      ansible.builtin.assert:
+        that:
+          - opensearch_verify_info.process.mlockall | bool
+          - opensearch_verify_stats.process.max_file_descriptors | int == opensearch_nofile_limit | int
+          - opensearch_verify_heap_bytes | int <= opensearch_verify_heap_expected | int
+          - opensearch_verify_heap_bytes | int > (opensearch_verify_heap_expected | int) * 0.9
+        fail_msg: >-
+          mlockall={{ opensearch_verify_info.process.mlockall }} (expected true),
+          max_file_descriptors={{ opensearch_verify_stats.process.max_file_descriptors }} (expected {{ opensearch_nofile_limit }}),
+          heap={{ (opensearch_verify_heap_bytes | int / 1048576) | round | int }}m (expected {{ opensearch_heap_size }})
+        success_msg: "mlockall=true, max_file_descriptors={{ opensearch_nofile_limit }}, heap={{ opensearch_heap_size }}"
+
+    - name: Read internal users
+      ansible.builtin.uri:
+        url: "https://localhost:{{ opensearch_http_port }}/_plugins/_security/api/internalusers"
+      register: opensearch_verify_users
+
+    - name: Check that only the configured users exist
+      vars:
+        opensearch_verify_actual_users: "{{ opensearch_verify_users.json | dict2items | map(attribute='key') | sort }}"
+        opensearch_verify_expected_users: >-
+          {{ opensearch_internal_users | combine(opensearch_extra_internal_users)
+             | dict2items | map(attribute='key') | sort }}
+      ansible.builtin.assert:
+        that:
+          - opensearch_verify_actual_users == opensearch_verify_expected_users
+        fail_msg: "Users: {{ opensearch_verify_actual_users }}, expected {{ opensearch_verify_expected_users }}"
+        success_msg: "Users: {{ opensearch_verify_actual_users }}"
+
+    - name: Check that demo users are rejected
+      ansible.builtin.uri:
+        url: "https://localhost:{{ opensearch_http_port }}/_plugins/_security/authinfo"
+        user: "{{ item }}"
+        password: "{{ item }}"
+        status_code: 401
+      loop:
+        - anomalyadmin
+        - kibanaro
+        - kibanaserver
+        - logstash
+        - readall
+        - snapshotrestore
+
+    - name: Read admin auth info
+      ansible.builtin.uri:
+        url: "https://localhost:{{ opensearch_http_port }}/_plugins/_security/authinfo"
+      register: opensearch_verify_admin_info
+
+    - name: Check admin roles
+      ansible.builtin.assert:
+        that:
+          - "'all_access' in opensearch_verify_admin_info.json.roles"
+        fail_msg: "Admin roles: {{ opensearch_verify_admin_info.json.roles }}, expected all_access"
+        success_msg: Admin has all_access

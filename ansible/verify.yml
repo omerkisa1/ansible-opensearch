@@ -1,0 +1,49 @@
+---
+- name: Verify OpenSearch server
+  hosts: opensearch
+  become: true
+
+  vars_prompt:
+    - name: verify_app_writer_password
+      prompt: "app_writer password"
+      private: true
+
+  tasks:
+    - name: Run role checks
+      ansible.builtin.import_role:
+        name: opensearch
+        tasks_from: verify.yml
+
+    - name: Check app_writer permissions
+      module_defaults:
+        ansible.builtin.uri:
+          user: app_writer
+          password: "{{ verify_app_writer_password }}"
+          force_basic_auth: true
+          validate_certs: true
+          ca_path: "{{ opensearch_certs_dir }}/root-ca.pem"
+      block:
+        - name: Check app_writer request
+          ansible.builtin.uri:
+            url: "https://localhost:{{ opensearch_http_port }}{{ item.path }}"
+            method: "{{ item.method | default('GET') }}"
+            body: "{{ item.body | default(omit) }}"
+            body_format: json
+            status_code: "{{ item.status }}"
+          loop:
+            - { name: "write to app-* index is allowed", method: PUT, path: /app-verify/_doc/1, body: { msg: verify }, status: [200, 201] }
+            - { name: "read from app-* index is allowed", path: /app-verify/_doc/1, status: [200] }
+            - { name: "write to other index is denied", method: PUT, path: /other-verify/_doc/1, body: { msg: verify }, status: [403] }
+            - { name: "cluster API is denied", path: /_cat/indices, status: [403] }
+            - { name: "security API is denied", path: /_plugins/_security/api/internalusers, status: [403] }
+          loop_control:
+            label: "{{ item.name }}"
+
+      always:
+        - name: Delete verification index
+          ansible.builtin.uri:
+            url: "https://localhost:{{ opensearch_http_port }}/app-verify"
+            method: DELETE
+            user: "{{ opensearch_admin_user }}"
+            password: "{{ opensearch_admin_password }}"
+            status_code: [200, 404]
