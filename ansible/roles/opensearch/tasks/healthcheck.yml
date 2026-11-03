@@ -5,24 +5,34 @@
     port: "{{ opensearch_http_port }}"
     timeout: "{{ opensearch_healthcheck_port_timeout }}"
 
+# Authenticates with the admin client certificate, not the admin password.
+# A wrong password hash must not block the play before security.yml can fix it.
 - name: Wait for OpenSearch cluster health
   ansible.builtin.uri:
     url: "https://localhost:{{ opensearch_http_port }}/_cluster/health"
     method: GET
-    user: "{{ opensearch_admin_user }}"
-    password: "{{ opensearch_admin_password }}"
-    force_basic_auth: true
+    client_cert: "{{ opensearch_certs_dir }}/admin.pem"
+    client_key: "{{ opensearch_certs_dir }}/admin-key.pem"
     validate_certs: true
     ca_path: "{{ opensearch_certs_dir }}/root-ca.pem"
-    status_code: [200, 503]
+    status_code: [200, 401, 403, 503]
     return_content: true
   register: opensearch_health
-  until:
-    - opensearch_health.status == 200
-    - opensearch_health.json.status in opensearch_healthcheck_status
+  until: >-
+    opensearch_health.status in [401, 403]
+    or (opensearch_health.status == 200
+        and opensearch_health.json.status in opensearch_healthcheck_status)
   retries: "{{ opensearch_healthcheck_retries }}"
   delay: "{{ opensearch_healthcheck_delay }}"
   changed_when: false
+
+- name: Fail if the admin certificate was rejected
+  ansible.builtin.fail:
+    msg: >-
+      OpenSearch rejected the admin certificate (HTTP {{ opensearch_health.status }}).
+      Check that plugins.security.authcz.admin_dn matches the subject of
+      {{ opensearch_certs_dir }}/admin.pem.
+  when: opensearch_health.status in [401, 403]
 
 - name: Show OpenSearch cluster health
   ansible.builtin.debug:
